@@ -72,6 +72,11 @@ const getTabs = (
           trackingMetadata: { section: "my_account", page: "out_of_office" },
         },
         {
+          name: "holidays",
+          href: "/settings/my-account/holidays",
+          trackingMetadata: { section: "my_account", page: "holidays" },
+        },
+        {
           name: "push_notifications",
           href: "/settings/my-account/push-notifications",
           trackingMetadata: { section: "my_account", page: "push_notifications" },

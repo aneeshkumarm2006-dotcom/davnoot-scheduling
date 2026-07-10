@@ -6,7 +6,6 @@ import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { MembershipRole } from "@calcom/prisma/enums";
 import { trpc } from "@calcom/trpc/react";
 import { Button } from "@calcom/ui/components/button";
-import { TextField } from "@calcom/ui/components/form";
 import { showToast } from "@calcom/ui/components/toast";
 
 const ROLES: MembershipRole[] = [MembershipRole.MEMBER, MembershipRole.ADMIN, MembershipRole.OWNER];
@@ -29,10 +28,19 @@ export default function TeamsView() {
 
   const refresh = () => utils.viewer.teams.getMembers.invalidate();
 
-  const addMember = trpc.viewer.teams.addMember.useMutation({
-    onSuccess: () => {
-      showToast(t("member_added_to_org") || "Member added", "success");
-      setEmail("");
+  // Accept one email or a pasted list (commas, semicolons, spaces or newlines).
+  const parsedEmails = email
+    .split(/[\s,;]+/)
+    .map((e) => e.trim())
+    .filter((e) => e.includes("@"));
+
+  const addMembers = trpc.viewer.teams.addMembers.useMutation({
+    onSuccess: ({ added, notFound }) => {
+      if (added > 0) showToast(`Added ${added} member${added === 1 ? "" : "s"}`, "success");
+      if (notFound.length > 0) {
+        showToast(`No account yet (ask them to sign in first): ${notFound.join(", ")}`, "warning");
+      }
+      if (added > 0) setEmail("");
       refresh();
     },
     onError: (e) => showToast(e.message, "error"),
@@ -91,20 +99,17 @@ export default function TeamsView() {
       {/* Add member */}
       {isAdmin && teamId != null && (
         <div className="border-subtle mt-6 rounded-lg border p-4">
-          <h2 className="text-emphasis text-sm font-medium">{t("add_team_member") || "Add a member"}</h2>
+          <h2 className="text-emphasis text-sm font-medium">{t("add_team_member") || "Add members"}</h2>
           <p className="text-subtle mb-3 text-xs">
-            The person must have signed up already. Enter their account email.
+            Paste one or many emails (commas, spaces or new lines). They must have signed in at least once.
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <TextField
-                type="email"
-                label={t("email")}
-                placeholder="teammate@davnoot.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+          <textarea
+            className="border-default bg-default text-default min-h-20 w-full rounded-md border p-2 text-sm"
+            placeholder={"alice@davnoot.com, bob@davnoot.com\ncarol@davnoot.com"}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <div className="mt-3 flex flex-wrap items-end gap-3">
             <div>
               <label className="text-emphasis mb-2 block text-sm font-medium">{t("role")}</label>
               <select
@@ -119,9 +124,11 @@ export default function TeamsView() {
               </select>
             </div>
             <Button
-              disabled={!email || addMember.isPending}
-              onClick={() => teamId != null && addMember.mutate({ teamId, email, role })}>
-              {t("add")}
+              disabled={parsedEmails.length === 0 || addMembers.isPending}
+              onClick={() =>
+                teamId != null && addMembers.mutate({ teamId, emails: parsedEmails, role })
+              }>
+              {parsedEmails.length > 1 ? `${t("add")} ${parsedEmails.length}` : t("add")}
             </Button>
           </div>
         </div>

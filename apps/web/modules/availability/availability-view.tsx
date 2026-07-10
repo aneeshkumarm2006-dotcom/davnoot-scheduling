@@ -155,10 +155,18 @@ export function AvailabilityList({ availabilities }: AvailabilityListProps) {
             </ul>
           </div>
           <div className="text-default mb-16 mt-4 block text-center text-sm">
-            {t("temporarily_out_of_office")}{" "}
-            <Link href="settings/my-account/out-of-office" className="underline">
-              {t("add_a_redirect")}
-            </Link>
+            <p>
+              {t("temporarily_out_of_office")}{" "}
+              <Link href="/settings/my-account/out-of-office" className="underline">
+                {t("add_a_redirect")}
+              </Link>
+            </p>
+            <p className="mt-2">
+              <Link href="/availability/troubleshoot" className="underline">
+                {t("troubleshoot")}
+              </Link>{" "}
+              — see exactly why a time is or isn&apos;t bookable.
+            </p>
           </div>
           {bulkUpdateModal && (
             <BulkEditDefaultForEventsModal

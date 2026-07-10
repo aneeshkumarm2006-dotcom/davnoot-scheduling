@@ -130,6 +130,38 @@ export const teamsRouter = router({
       return { success: true };
     }),
 
+  /**
+   * Add several existing users at once (paste a list of emails).
+   * Reports back which emails had no account so the admin knows who still needs to sign up.
+   */
+  addMembers: authedProcedure
+    .input(
+      z.object({
+        teamId: z.number(),
+        emails: z.array(z.string().email()).min(1),
+        role: z.nativeEnum(MembershipRole).default(MembershipRole.MEMBER),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertAdmin(ctx.user.id, input.teamId);
+      const wanted = Array.from(new Set(input.emails.map((e) => e.trim().toLowerCase())));
+      const users = await prisma.user.findMany({
+        where: { email: { in: wanted, mode: "insensitive" } },
+        select: { id: true, email: true },
+      });
+      const foundEmails = new Set(users.map((u) => u.email.toLowerCase()));
+      const notFound = wanted.filter((e) => !foundEmails.has(e));
+
+      for (const user of users) {
+        await prisma.membership.upsert({
+          where: { userId_teamId: { userId: user.id, teamId: input.teamId } },
+          update: { role: input.role, accepted: true },
+          create: { userId: user.id, teamId: input.teamId, role: input.role, accepted: true },
+        });
+      }
+      return { added: users.length, notFound };
+    }),
+
   // Change a member's role.
   updateMemberRole: authedProcedure
     .input(z.object({ teamId: z.number(), userId: z.number(), role: z.nativeEnum(MembershipRole) }))
