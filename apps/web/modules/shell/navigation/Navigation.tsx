@@ -36,6 +36,12 @@ const getNavigationItems = (): NavigationItemType[] => [
     isCurrent: ({ pathname }) => pathname?.startsWith("/teams") ?? false,
   },
   {
+    name: "group_link",
+    href: "/group-link",
+    icon: "user-plus",
+    isCurrent: ({ pathname }) => pathname?.startsWith("/group-link") ?? false,
+  },
+  {
     name: "apps",
     href: "/apps",
     icon: "grid-3x3",

@@ -41,6 +41,28 @@ async function assertMember(userId: number, teamId: number) {
 }
 
 export const teamsRouter = router({
+  /**
+   * People the current user can build a dynamic group link with (`/alice+bob`).
+   * Dynamic booking resolves people by username and isn't team-scoped, so this
+   * returns every user who has a username and hasn't opted out of dynamic booking.
+   */
+  listBookableUsers: authedProcedure.query(async ({ ctx }) => {
+    const select = { id: true, name: true, username: true, avatarUrl: true } as const;
+    const [me, users] = await Promise.all([
+      prisma.user.findUnique({ where: { id: ctx.user.id }, select }),
+      prisma.user.findMany({
+        where: {
+          username: { not: null },
+          allowDynamicBooking: { not: false },
+          NOT: { id: ctx.user.id },
+        },
+        select,
+        orderBy: { name: "asc" },
+      }),
+    ]);
+    return { me, users };
+  }),
+
   // Teams the current user belongs to, with their role.
   list: authedProcedure.query(async ({ ctx }) => {
     const memberships = await prisma.membership.findMany({
