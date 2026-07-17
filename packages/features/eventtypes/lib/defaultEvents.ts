@@ -1,4 +1,4 @@
-import { DailyLocationType } from "@calcom/app-store/constants";
+import { MeetLocationType } from "@calcom/app-store/constants";
 import { eventTypeMetaDataSchemaWithTypedApps } from "@calcom/app-store/zod-utils";
 import slugify from "@calcom/lib/slugify";
 import type { Prisma, SelectedCalendar } from "@calcom/prisma/client";
@@ -70,7 +70,7 @@ const commons = {
   periodDays: null,
   slotInterval: null,
   offsetStart: 0,
-  locations: [{ type: DailyLocationType }],
+  locations: [{ type: MeetLocationType }],
   customInputs,
   disableGuests: true,
   minimumBookingNotice: 120,
