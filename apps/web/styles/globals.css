@@ -422,3 +422,55 @@ html[dir="rtl"] .react-tel-input .flag-dropdown {
   left: auto !important;
   right: 0 !important;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Davnoot Signature — navy meta rail on the public booking page.
+ *
+ * The Booker's `meta` grid area becomes a dark brand panel while the calendar
+ * and time slots stay light. EventMeta's children use semantic tokens
+ * (text-emphasis/subtle, bg-default/subtle) that render dark-on-light, so we
+ * re-map those tokens *inside the rail only* rather than rewriting the
+ * component. Contrast on #0b1220: white ≈16:1, #94a3b8 ≈7:1 (both pass AA).
+ * ───────────────────────────────────────────────────────────────────────── */
+.davnoot-meta-rail {
+  background-color: #0b1220;
+  border-radius: 1rem 1rem 0 0; /* mobile: meta stacks above the calendar */
+}
+
+@media (min-width: 768px) {
+  .davnoot-meta-rail {
+    border-radius: 1rem 0 0 1rem; /* desktop: left rail, matches card's rounded-2xl */
+  }
+}
+
+.davnoot-meta-rail .text-emphasis,
+.davnoot-meta-rail .text-default {
+  color: #ffffff;
+}
+
+.davnoot-meta-rail .text-subtle {
+  color: #94a3b8;
+}
+
+.davnoot-meta-rail svg {
+  color: #94a3b8;
+}
+
+/* Light chips/surfaces (timezone hover, avatar rings) become translucent, not white */
+.davnoot-meta-rail .bg-default,
+.davnoot-meta-rail .bg-subtle,
+.davnoot-meta-rail .bg-emphasis {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Dark mode: the whole card is already dark, so the rail would vanish.
+   Lift it to a lighter navy + hairline edge so it still reads as a panel. */
+.dark .davnoot-meta-rail {
+  background-color: #131c2e;
+}
+
+@media (min-width: 768px) {
+  .dark .davnoot-meta-rail {
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08);
+  }
+}

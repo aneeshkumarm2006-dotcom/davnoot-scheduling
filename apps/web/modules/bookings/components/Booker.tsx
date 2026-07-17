@@ -399,7 +399,17 @@ const BookerComponent = ({
             <StickyOnDesktop key="meta" className={classNames("relative z-10 flex [grid-area:meta]")}>
               <BookerSection
                 area="meta"
-                className="max-w-screen flex w-full flex-col md:w-(--booker-meta-width)">
+                className="davnoot-meta-rail max-w-screen flex w-full flex-col md:w-(--booker-meta-width)">
+                {!hideEventTypeDetails && (
+                  <div className="px-6 pt-6">
+                    <img
+                      src="/cal-com-icon-white.svg"
+                      alt="Davnoot"
+                      className="h-6 w-auto opacity-90"
+                      loading="eager"
+                    />
+                  </div>
+                )}
                 {!hideEventTypeDetails && orgBannerUrl && (
                   <img
                     loading="eager"
