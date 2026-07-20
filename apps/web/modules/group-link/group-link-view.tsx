@@ -19,10 +19,15 @@ import { showToast } from "@calcom/ui/components/toast";
  *   - Click a slot to book it yourself (opens the booking screen with the time pre-filled).
  *   - Copy the link and send it to a client so they pick a time.
  */
+// Must match the dynamic event's multipleDuration options in defaultEvents.ts
+const DURATIONS = [15, 30, 45, 60, 90];
+const DEFAULT_DURATION = 30;
+
 export default function GroupLinkView() {
   const { t } = useLocale();
   const { data, isPending } = trpc.viewer.teams.listBookableUsers.useQuery();
   const [selected, setSelected] = useState<string[]>([]);
+  const [duration, setDuration] = useState(DEFAULT_DURATION);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const meUsername = data?.me?.username ?? null;
@@ -38,8 +43,9 @@ export default function GroupLinkView() {
 
   const link = useMemo(() => {
     if (!meUsername || selected.length === 0) return null;
-    return `${origin}/${usernameList.join("+")}`;
-  }, [origin, meUsername, selected.length, usernameList]);
+    const base = `${origin}/${usernameList.join("+")}`;
+    return duration === DEFAULT_DURATION ? base : `${base}?duration=${duration}`;
+  }, [origin, meUsername, selected.length, usernameList, duration]);
 
   // Look two weeks ahead for openings.
   const timeWindow = useMemo(() => {
@@ -55,6 +61,7 @@ export default function GroupLinkView() {
       startTime: timeWindow.startTime,
       endTime: timeWindow.endTime,
       timeZone,
+      duration: String(duration),
     },
     {
       enabled: selected.length > 0 && !!meUsername,
@@ -81,6 +88,7 @@ export default function GroupLinkView() {
       month: d.format("YYYY-MM"),
       date: d.format("YYYY-MM-DD"),
       slot: iso,
+      duration: String(duration),
     });
     return `${origin}/${usernameList.join("+")}?${params.toString()}`;
   };
@@ -142,12 +150,35 @@ export default function GroupLinkView() {
         </ul>
       </div>
 
+      {/* Duration picker */}
+      {selected.length > 0 && (
+        <div className="mt-6 flex items-center gap-2">
+          <span className="text-emphasis text-sm font-medium">How long?</span>
+          <div className="flex flex-wrap gap-2">
+            {DURATIONS.map((mins) => (
+              <button
+                key={mins}
+                type="button"
+                onClick={() => setDuration(mins)}
+                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                  duration === mins
+                    ? "border-emphasis bg-emphasis text-emphasis font-semibold"
+                    : "border-default bg-default text-default hover:border-emphasis"
+                }`}>
+                {mins}m
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Combined availability */}
       {selected.length > 0 && (
-        <div className="border-subtle mt-6 overflow-hidden rounded-lg border">
+        <div className="border-subtle mt-4 overflow-hidden rounded-lg border">
           <div className="border-subtle bg-muted flex items-center justify-between border-b px-4 py-2">
             <p className="text-emphasis text-sm font-medium">
-              When everyone&apos;s free <span className="text-subtle">(next 2 weeks · 30 min)</span>
+              When everyone&apos;s free{" "}
+              <span className="text-subtle">(next 2 weeks · {duration} min)</span>
             </p>
             <span className="text-subtle text-xs">{timeZone}</span>
           </div>
