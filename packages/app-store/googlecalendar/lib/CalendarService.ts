@@ -296,26 +296,38 @@ class GoogleCalendarService implements Calendar {
       }
 
       if (event && event.id && event.hangoutLink) {
-        await calendar.events.patch({
-          // Update the same event but this time we know the hangout link
-          calendarId: selectedCalendar,
-          eventId: event.id || "",
-          requestBody: {
-            description: getRichDescription({
-              ...calEvent,
-              additionalInformation: { hangoutLink: event.hangoutLink },
-            }),
-            location: getLocation({
-              videoCallData: calEvent.videoCallData,
-              additionalInformation: {
-                ...calEvent.additionalInformation,
-                hangoutLink: event.hangoutLink,
-              },
-              location: calEvent.location,
-              uid: calEvent.uid,
-            }),
-          },
-        });
+        // This patch only enriches the event description with the Meet link.
+        // The event already exists in Google at this point, so a patch failure
+        // must not fail the whole creation — otherwise the booking is marked
+        // failed and confirmation emails are silently skipped while attendees
+        // still have the event on their calendars.
+        try {
+          await calendar.events.patch({
+            // Update the same event but this time we know the hangout link
+            calendarId: selectedCalendar,
+            eventId: event.id || "",
+            requestBody: {
+              description: getRichDescription({
+                ...calEvent,
+                additionalInformation: { hangoutLink: event.hangoutLink },
+              }),
+              location: getLocation({
+                videoCallData: calEvent.videoCallData,
+                additionalInformation: {
+                  ...calEvent.additionalInformation,
+                  hangoutLink: event.hangoutLink,
+                },
+                location: calEvent.location,
+                uid: calEvent.uid,
+              }),
+            },
+          });
+        } catch (error) {
+          this.log.warn(
+            "Failed to patch Meet link into event description; keeping created event",
+            safeStringify({ error, selectedCalendar, credentialId })
+          );
+        }
       }
 
       return {
