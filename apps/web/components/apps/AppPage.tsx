@@ -71,7 +71,6 @@ export const AppPage = ({
   variant,
   body,
   categories,
-  author,
   price = 0,
   commission,
   isGlobal = false,
@@ -370,10 +369,6 @@ export const AppPage = ({
                   </Badge>
                 </>
               )}
-              •{" "}
-              <a target="_blank" rel="noreferrer" href={website}>
-                {t("published_by", { author })}
-              </a>
             </h2>
             {isTemplate && (
               <Badge variant="red" className="mt-4">
