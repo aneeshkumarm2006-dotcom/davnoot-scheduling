@@ -47,7 +47,6 @@ import { DryRunMessage } from "./DryRunMessage";
 import { EventMeta } from "./EventMeta";
 import { HavingTroubleFindingTime } from "./HavingTroubleFindingTime";
 import { LargeCalendar } from "./LargeCalendar";
-import { OverlayCalendar } from "./OverlayCalendar/OverlayCalendar";
 import { SlotSelectionModalHeader } from "./SlotSelectionModalHeader";
 import { NotFound } from "./Unavailable";
 import { VerifyCodeDialog } from "./VerifyCodeDialog";
@@ -57,17 +56,12 @@ const BookerComponent = ({
   eventSlug,
   hideBranding = false,
   entity,
-  onOverlayClickNoCalendar,
-  onClickOverlayContinue,
-  onOverlaySwitchStateChange,
   sessionUsername,
   rescheduleUid,
-  hasSession,
   extraOptions,
   bookings,
   verifyEmail,
   slots,
-  calendars,
   bookerForm,
   event,
   bookerLayout,
@@ -166,8 +160,6 @@ const BookerComponent = ({
     renderConfirmNotVerifyEmailButtonCond,
     isVerificationCodeSending,
   } = verifyEmail;
-
-  const { overlayBusyDates, isOverlayCalendarEnabled, connectedCalendars, onToggleCalendar } = calendars;
 
   const scrolledToTimeslotsOnce = useRef(false);
   const embedUiConfig = useEmbedUiConfig();
@@ -376,23 +368,7 @@ const BookerComponent = ({
                   extraDays={layout === BookerLayouts.COLUMN_VIEW ? columnViewExtraDays.current : extraDays}
                   isMobile={isMobile}
                   nextSlots={nextSlots}
-                  renderOverlay={() => {
-                    if (isEmbed) return null;
-                    return (
-                      <OverlayCalendar
-                        isOverlayCalendarEnabled={isOverlayCalendarEnabled}
-                        connectedCalendars={connectedCalendars}
-                        overlayBusyDates={overlayBusyDates}
-                        onToggleCalendar={onToggleCalendar}
-                        hasSession={hasSession}
-                        handleClickContinue={onClickOverlayContinue}
-                        handleSwitchStateChange={onOverlaySwitchStateChange}
-                        handleClickNoCalendar={() => {
-                          onOverlayClickNoCalendar();
-                        }}
-                      />
-                    );
-                  }}
+                  renderOverlay={() => null}
                 />
               )}
             </BookerSection>
