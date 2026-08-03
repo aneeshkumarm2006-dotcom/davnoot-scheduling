@@ -3,6 +3,7 @@ import { useEffect } from "react";
 
 import { useBookerStoreContext } from "@calcom/features/bookings/Booker/BookerStoreProvider";
 import type { BookerEvent } from "@calcom/features/bookings/types";
+import { useCompatSearchParams } from "@calcom/lib/hooks/useCompatSearchParams";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import classNames from "@calcom/ui/classNames";
 
@@ -39,6 +40,12 @@ export const EventDuration = ({
   event: Pick<BookerEvent, "length" | "metadata" | "isDynamic">;
 }) => {
   const { t } = useLocale();
+  const searchParams = useCompatSearchParams();
+  // Links shared from the internal group-link page carry lockDuration=1 so
+  // clients can only book the meeting length the organizer allocated. We can't
+  // key off the `duration` param alone because the booker store writes it back
+  // into the URL on every selection.
+  const isDurationLockedByLink = searchParams?.get("lockDuration") === "1";
   const [selectedDuration, setSelectedDuration, state] = useBookerStoreContext((state) => [
     state.selectedDuration,
     state.setSelectedDuration,
@@ -61,7 +68,7 @@ export const EventDuration = ({
 
   // When duration selector is hidden, show only the selected/default duration as text
   // URL params can still set the duration, but the user cannot change it via UI
-  if (hideDurationSelector) {
+  if (hideDurationSelector || isDurationLockedByLink) {
     return <>{getDurationFormatted(selectedDuration || event.length, t)}</>;
   }
 

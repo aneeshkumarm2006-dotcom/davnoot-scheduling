@@ -41,10 +41,11 @@ export default function GroupLinkView() {
     [meUsername, selected]
   );
 
+  // lockDuration=1 hides the duration switcher on the public booking page so
+  // clients can only book the length chosen here.
   const link = useMemo(() => {
     if (!meUsername || selected.length === 0) return null;
-    const base = `${origin}/${usernameList.join("+")}`;
-    return duration === DEFAULT_DURATION ? base : `${base}?duration=${duration}`;
+    return `${origin}/${usernameList.join("+")}?duration=${duration}&lockDuration=1`;
   }, [origin, meUsername, selected.length, usernameList, duration]);
 
   // Look two weeks ahead for openings.
@@ -224,6 +225,9 @@ export default function GroupLinkView() {
       {link && (
         <div className="border-subtle mt-6 rounded-lg border p-4">
           <p className="text-emphasis text-sm font-medium">Or send a link to a client</p>
+          <p className="text-subtle mt-1 text-xs">
+            Clients opening this link can only book <strong>{duration}-minute</strong> slots.
+          </p>
           <p className="text-default mt-2 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs">
             {link}
           </p>
