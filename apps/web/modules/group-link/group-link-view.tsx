@@ -28,6 +28,7 @@ export default function GroupLinkView() {
   const { data, isPending } = trpc.viewer.teams.listBookableUsers.useQuery();
   const [selected, setSelected] = useState<string[]>([]);
   const [duration, setDuration] = useState(DEFAULT_DURATION);
+  const [includeToday, setIncludeToday] = useState(false);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const meUsername = data?.me?.username ?? null;
@@ -42,11 +43,13 @@ export default function GroupLinkView() {
   );
 
   // lockDuration=1 hides the duration switcher on the public booking page so
-  // clients can only book the length chosen here.
+  // clients can only book the length chosen here. Same-day slots are hidden
+  // by default; allowToday=1 opts this specific link back in.
   const link = useMemo(() => {
     if (!meUsername || selected.length === 0) return null;
-    return `${origin}/${usernameList.join("+")}?duration=${duration}&lockDuration=1`;
-  }, [origin, meUsername, selected.length, usernameList, duration]);
+    const todayParam = includeToday ? "&allowToday=1" : "";
+    return `${origin}/${usernameList.join("+")}?duration=${duration}&lockDuration=1${todayParam}`;
+  }, [origin, meUsername, selected.length, usernameList, duration, includeToday]);
 
   // Look two weeks ahead for openings.
   const timeWindow = useMemo(() => {
@@ -63,6 +66,7 @@ export default function GroupLinkView() {
       endTime: timeWindow.endTime,
       timeZone,
       duration: String(duration),
+      ...(includeToday ? { allowSameDay: true } : {}),
     },
     {
       enabled: selected.length > 0 && !!meUsername,
@@ -90,6 +94,7 @@ export default function GroupLinkView() {
       date: d.format("YYYY-MM-DD"),
       slot: iso,
       duration: String(duration),
+      ...(includeToday ? { allowToday: "1" } : {}),
     });
     return `${origin}/${usernameList.join("+")}?${params.toString()}`;
   };
@@ -173,6 +178,20 @@ export default function GroupLinkView() {
         </div>
       )}
 
+      {/* Same-day opt-in */}
+      {selected.length > 0 && (
+        <label className="mt-3 flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded"
+            checked={includeToday}
+            onChange={() => setIncludeToday((v) => !v)}
+          />
+          <span className="text-emphasis text-sm">Include today&apos;s availability</span>
+          <span className="text-subtle text-xs">(off = earliest bookable day is tomorrow)</span>
+        </label>
+      )}
+
       {/* Combined availability */}
       {selected.length > 0 && (
         <div className="border-subtle mt-4 overflow-hidden rounded-lg border">
@@ -226,7 +245,10 @@ export default function GroupLinkView() {
         <div className="border-subtle mt-6 rounded-lg border p-4">
           <p className="text-emphasis text-sm font-medium">Or send a link to a client</p>
           <p className="text-subtle mt-1 text-xs">
-            Clients opening this link can only book <strong>{duration}-minute</strong> slots.
+            Clients opening this link can only book <strong>{duration}-minute</strong> slots.{" "}
+            {includeToday
+              ? "Today's slots are included."
+              : "Same-day slots are hidden — the earliest they can book is tomorrow."}
           </p>
           <p className="text-default mt-2 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs">
             {link}

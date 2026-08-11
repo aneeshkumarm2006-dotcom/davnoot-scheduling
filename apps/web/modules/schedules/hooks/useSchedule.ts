@@ -84,6 +84,8 @@ export const useSchedule = ({
   // We allow skipping the schedule fetch as a requirement for prerendering in iframe through embed as when the pre-rendered iframe is connected, then we would fetch the availability, which would be upto-date
   // Also, a reuse through Headless Router could completely change the availability as different team members are selected and thus it is unnecessary to fetch the schedule
   const skipGetSchedule = searchParams?.get("cal.skipSlotsFetch") === "true";
+  // Same-day slots are hidden server-side unless the shared link opted in.
+  const allowSameDay = searchParams?.get("allowToday") === "1";
   const embedConnectVersion = searchParams?.get("cal.embed.connectVersion") || "0";
   const input = {
     isTeamEvent,
@@ -107,6 +109,7 @@ export const useSchedule = ({
     routedTeamMemberIds,
     skipContactOwner,
     ...(queuedFormResponseId ? { queuedFormResponseId } : {}),
+    ...(allowSameDay ? { allowSameDay } : {}),
     email,
     // Ensures that connectVersion causes a refresh of the data
     ...(embedConnectVersion ? { embedConnectVersion } : {}),

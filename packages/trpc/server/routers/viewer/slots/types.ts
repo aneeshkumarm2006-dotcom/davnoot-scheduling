@@ -33,6 +33,9 @@ export const getScheduleSchemaObject = z.object({
   routedTeamMemberIds: z.array(z.number()).nullish(),
   skipContactOwner: z.boolean().nullish(),
   rrHostSubsetIds: z.array(z.number()).nullish(),
+  // Davnoot: same-day slots are hidden by default; senders can opt back in
+  // per-link via allowToday=1 which the client maps to this flag.
+  allowSameDay: z.boolean().optional(),
   _enableTroubleshooter: z.boolean().optional(),
   _bypassCalendarBusyTimes: z.boolean().optional(),
   _silentCalendarFailures: z.boolean().optional(),

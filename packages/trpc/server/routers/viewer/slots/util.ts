@@ -1385,6 +1385,19 @@ export class AvailableSlotsService {
       timeZone: input.timeZone,
     });
 
+    // Davnoot policy: same-day bookings are not offered by default — the team
+    // needs at least a day to prepare for a meeting. Links can opt back in via
+    // allowToday=1 (mapped to input.allowSameDay). Slot keys are YYYY-MM-DD in
+    // the booker's timezone, so string comparison against "today" is safe here.
+    if (!input.allowSameDay) {
+      const todayInBookerTz = formatter.format(new Date());
+      for (const date of Object.keys(filteredSlotsMappedToDate)) {
+        if (date <= todayInBookerTz) {
+          delete filteredSlotsMappedToDate[date];
+        }
+      }
+    }
+
     // We only want to run this on single targeted events and not dynamic
     if (!Object.keys(filteredSlotsMappedToDate).length && input.usernameList?.length === 1) {
       try {
