@@ -71,7 +71,6 @@ export const BookEventForm = ({
   const setFormValues = useBookerStoreContext((state) => state.setFormValues);
   const bookingData = useBookerStoreContext((state) => state.bookingData);
   const rescheduleUid = useBookerStoreContext((state) => state.rescheduleUid);
-  const username = useBookerStoreContext((state) => state.username);
   const isPlatformBookerEmbed = useIsPlatformBookerEmbed();
   const { timeFormat, timezone } = useBookerTime();
 
@@ -124,7 +123,6 @@ export const BookEventForm = ({
         handleSubmit={onSubmit}
         noValidate>
         <BookingFields
-          isDynamicGroupBooking={!!(username && username.indexOf("+") > -1)}
           fields={eventType.bookingFields}
           locations={eventType.locations}
           rescheduleUid={rescheduleUid || undefined}

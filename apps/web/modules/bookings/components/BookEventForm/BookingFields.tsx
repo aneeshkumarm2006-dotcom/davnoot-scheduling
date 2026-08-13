@@ -26,7 +26,6 @@ export const BookingFields = ({
   fields,
   locations,
   rescheduleUid,
-  isDynamicGroupBooking,
   bookingData,
   isPaidEvent,
   paymentCurrency = "USD",
@@ -35,7 +34,6 @@ export const BookingFields = ({
   locations: LocationObject[];
   rescheduleUid?: string;
   bookingData?: GetBookingType | null;
-  isDynamicGroupBooking: boolean;
   isPaidEvent?: boolean;
   paymentCurrency?: string;
 }) => {
@@ -165,8 +163,10 @@ export const BookingFields = ({
 
         if (field.name === SystemField.Enum.guests) {
           readOnly = false;
-          // No matter what user configured for Guests field, we don't show it for dynamic group booking as that doesn't support guests
-          hidden = isDynamicGroupBooking ? true : !!field.hidden;
+          // Guests are supported on dynamic group bookings too: the booking
+          // service appends them to the attendee list regardless of event kind,
+          // so visibility is governed purely by the event's disableGuests flag.
+          hidden = !!field.hidden;
         }
 
         // We don't show `notes` field during reschedule but since it's a query param we better valid if rescheduleUid brought any bookingData
