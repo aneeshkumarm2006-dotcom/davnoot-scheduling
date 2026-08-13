@@ -72,7 +72,9 @@ const commons = {
   offsetStart: 0,
   locations: [{ type: MeetLocationType }],
   customInputs,
-  disableGuests: true,
+  // Bookers on group links can invite extra guests; they receive the
+  // confirmation email and the calendar invite with the Meet link.
+  disableGuests: false,
   minimumBookingNotice: 120,
   schedule: null,
   timeZone: null,
