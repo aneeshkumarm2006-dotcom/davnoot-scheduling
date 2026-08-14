@@ -6,6 +6,7 @@ import type { Timezone } from "@calcom/features/bookings/Booker/types";
 import { FromToTime } from "@calcom/features/bookings/Booker/utils/dates";
 import { useTimePreferences } from "@calcom/features/bookings/lib";
 import type { BookerEvent } from "@calcom/features/bookings/types";
+import { useCompatSearchParams } from "@calcom/lib/hooks/useCompatSearchParams";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { markdownToSafeHTMLClient } from "@calcom/lib/markdownToSafeHTMLClient";
 import { CURRENT_TIMEZONE } from "@calcom/lib/timezoneConstants";
@@ -99,6 +100,7 @@ export const EventMeta = ({
   hideEventTypeDetails?: boolean;
 }) => {
   const { timeFormat, timezone } = useBookerTime();
+  const searchParams = useCompatSearchParams();
   const [setTimezone] = useTimePreferences((state) => [state.setTimezone]);
   const [setBookerStoreTimezone] = useBookerStoreContext((state) => [state.setTimezone], shallow);
   const selectedDuration = useBookerStoreContext((state) => state.selectedDuration);
@@ -154,6 +156,10 @@ export const EventMeta = ({
     EventTypeAutoTranslatedField.TITLE,
     userLocale
   );
+  // Organizer-fixed meeting name passed on the link (?title=...) — show it as
+  // the heading so the booker sees the actual meeting name, not the generic
+  // event-type title.
+  const titleFromUrl = searchParams?.get("title")?.trim() || null;
 
   return (
     <div className={`${classNames?.eventMetaContainer || ""} relative z-10 p-6`} data-testid="event-meta">
@@ -174,7 +180,7 @@ export const EventMeta = ({
             hideOrgTeamAvatar={hideOrgTeamAvatar}
           />
           <EventTitle className={`${classNames?.eventMetaTitle} my-2`}>
-            {translatedTitle ?? event?.title}
+            {titleFromUrl ?? translatedTitle ?? event?.title}
           </EventTitle>
           {(event.description || translatedDescription) && (
             <EventMetaBlock data-testid="event-meta-description" contentClassName="mb-8">
