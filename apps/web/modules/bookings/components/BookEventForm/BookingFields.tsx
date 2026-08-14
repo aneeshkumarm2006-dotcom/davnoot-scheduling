@@ -5,6 +5,7 @@ import getLocationOptionsForSelect from "@calcom/features/bookings/lib/getLocati
 import { fieldsThatSupportLabelAsSafeHtml } from "@calcom/features/form-builder/fieldsThatSupportLabelAsSafeHtml";
 import { fieldTypesConfigMap } from "@calcom/features/form-builder/fieldTypes";
 import { SystemField } from "@calcom/lib/bookings/SystemField";
+import { useCompatSearchParams } from "@calcom/lib/hooks/useCompatSearchParams";
 import { useLocale } from "@calcom/lib/hooks/useLocale";
 import { markdownToSafeHTML } from "@calcom/lib/markdownToSafeHTML";
 import type { RouterOutputs } from "@calcom/trpc/react";
@@ -39,6 +40,10 @@ export const BookingFields = ({
 }) => {
   const { t, i18n } = useLocale();
   const { watch, setValue, formState } = useFormContext();
+  const searchParams = useCompatSearchParams();
+  // Links can fix the meeting name via ?title=... — the organizer decides the
+  // event title and the "What is this meeting about?" question is not shown.
+  const titleFromUrl = searchParams?.get("title")?.trim() || null;
   const locationResponse = watch("responses.location");
   const currentView = rescheduleUid ? "reschedule" : "";
   // Identify all phone fields (except location field)
@@ -159,6 +164,15 @@ export const BookingFields = ({
           }
           // `smsReminderNumber` can be edited during reschedule even though it's a system field
           readOnly = false;
+        }
+
+        if (field.name === SystemField.Enum.title && titleFromUrl) {
+          // Keep the response in sync with the organizer-fixed name and drop
+          // the field from the form, mirroring the smsReminderNumber pattern.
+          if (watch(`responses.${SystemField.Enum.title}`) !== titleFromUrl) {
+            setValue(`responses.${SystemField.Enum.title}`, titleFromUrl);
+          }
+          return null;
         }
 
         if (field.name === SystemField.Enum.guests) {

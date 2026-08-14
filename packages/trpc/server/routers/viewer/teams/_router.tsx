@@ -17,6 +17,14 @@ import { router } from "../../../trpc";
  * flow for not-yet-registered users can be layered on later.
  */
 
+const groupLinkTemplateSchema = z.object({
+  name: z.string().min(1).max(100),
+  usernames: z.array(z.string()).min(1),
+  duration: z.number().int().positive(),
+  includeToday: z.boolean().optional(),
+  title: z.string().max(200).optional(),
+});
+
 async function getMembership(userId: number, teamId: number) {
   return prisma.membership.findFirst({
     where: { userId, teamId, accepted: true },
@@ -62,6 +70,53 @@ export const teamsRouter = router({
     ]);
     return { me, users };
   }),
+
+  // Saved group-link presets (people + duration + meeting name), stored on the
+  // user's metadata so they follow the user across devices. Each user has
+  // their own list; saving under an existing name overwrites that template.
+  groupLinkTemplates: authedProcedure.query(async ({ ctx }) => {
+    const user = await prisma.user.findUnique({
+      where: { id: ctx.user.id },
+      select: { metadata: true },
+    });
+    const metadata = (user?.metadata ?? {}) as Record<string, unknown>;
+    const parsed = groupLinkTemplateSchema.array().safeParse(metadata.groupLinkTemplates);
+    return parsed.success ? parsed.data : [];
+  }),
+
+  saveGroupLinkTemplate: authedProcedure.input(groupLinkTemplateSchema).mutation(async ({ ctx, input }) => {
+    const user = await prisma.user.findUnique({
+      where: { id: ctx.user.id },
+      select: { metadata: true },
+    });
+    const metadata = (user?.metadata ?? {}) as Record<string, unknown>;
+    const parsed = groupLinkTemplateSchema.array().safeParse(metadata.groupLinkTemplates);
+    const templates = parsed.success ? parsed.data : [];
+    const next = [...templates.filter((t) => t.name !== input.name), input];
+    await prisma.user.update({
+      where: { id: ctx.user.id },
+      data: { metadata: { ...metadata, groupLinkTemplates: next } },
+    });
+    return next;
+  }),
+
+  deleteGroupLinkTemplate: authedProcedure
+    .input(z.object({ name: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { metadata: true },
+      });
+      const metadata = (user?.metadata ?? {}) as Record<string, unknown>;
+      const parsed = groupLinkTemplateSchema.array().safeParse(metadata.groupLinkTemplates);
+      const templates = parsed.success ? parsed.data : [];
+      const next = templates.filter((t) => t.name !== input.name);
+      await prisma.user.update({
+        where: { id: ctx.user.id },
+        data: { metadata: { ...metadata, groupLinkTemplates: next } },
+      });
+      return next;
+    }),
 
   // Teams the current user belongs to, with their role.
   list: authedProcedure.query(async ({ ctx }) => {

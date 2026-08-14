@@ -385,6 +385,19 @@ export const userMetadata = z
     sessionTimeout: z.number().optional(), // Minutes
     defaultConferencingApp: schemaDefaultConferencingApp.optional(),
     defaultBookerLayouts: bookerLayouts.optional(),
+    // Davnoot: saved group-link presets (people + duration + meeting name).
+    // Whitelisted here so metadata round-trips through this schema keep them.
+    groupLinkTemplates: z
+      .array(
+        z.object({
+          name: z.string(),
+          usernames: z.array(z.string()),
+          duration: z.number(),
+          includeToday: z.boolean().optional(),
+          title: z.string().optional(),
+        })
+      )
+      .optional(),
     emailChangeWaitingForVerification: z
       .string()
       .transform((data) => data.toLowerCase())

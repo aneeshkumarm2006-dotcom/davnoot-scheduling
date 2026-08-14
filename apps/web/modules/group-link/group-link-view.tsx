@@ -25,10 +25,23 @@ const DEFAULT_DURATION = 30;
 
 export default function GroupLinkView() {
   const { t } = useLocale();
+  const utils = trpc.useUtils();
   const { data, isPending } = trpc.viewer.teams.listBookableUsers.useQuery();
+  const templates = trpc.viewer.teams.groupLinkTemplates.useQuery();
+  const saveTemplate = trpc.viewer.teams.saveGroupLinkTemplate.useMutation({
+    onSuccess: () => {
+      utils.viewer.teams.groupLinkTemplates.invalidate();
+      showToast("Template saved", "success");
+    },
+  });
+  const deleteTemplate = trpc.viewer.teams.deleteGroupLinkTemplate.useMutation({
+    onSuccess: () => utils.viewer.teams.groupLinkTemplates.invalidate(),
+  });
   const [selected, setSelected] = useState<string[]>([]);
   const [duration, setDuration] = useState(DEFAULT_DURATION);
   const [includeToday, setIncludeToday] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [templateName, setTemplateName] = useState("");
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const meUsername = data?.me?.username ?? null;
@@ -44,12 +57,35 @@ export default function GroupLinkView() {
 
   // lockDuration=1 hides the duration switcher on the public booking page so
   // clients can only book the length chosen here. Same-day slots are hidden
-  // by default; allowToday=1 opts this specific link back in.
+  // by default; allowToday=1 opts this specific link back in. A meeting name
+  // rides along as title=... and is fixed — the booker can't change it.
   const link = useMemo(() => {
     if (!meUsername || selected.length === 0) return null;
     const todayParam = includeToday ? "&allowToday=1" : "";
-    return `${origin}/${usernameList.join("+")}?duration=${duration}&lockDuration=1${todayParam}`;
-  }, [origin, meUsername, selected.length, usernameList, duration, includeToday]);
+    const titleParam = meetingTitle.trim()
+      ? `&title=${encodeURIComponent(meetingTitle.trim())}`
+      : "";
+    return `${origin}/${usernameList.join("+")}?duration=${duration}&lockDuration=1${todayParam}${titleParam}`;
+  }, [origin, meUsername, selected.length, usernameList, duration, includeToday, meetingTitle]);
+
+  const applyTemplate = (template: {
+    name: string;
+    usernames: string[];
+    duration: number;
+    includeToday?: boolean;
+    title?: string;
+  }) => {
+    const known = new Set((data?.users ?? []).map((u) => u.username as string));
+    const missing = template.usernames.filter((u) => !known.has(u));
+    setSelected(template.usernames.filter((u) => known.has(u)));
+    setDuration(template.duration);
+    setIncludeToday(!!template.includeToday);
+    setMeetingTitle(template.title ?? "");
+    setTemplateName(template.name);
+    if (missing.length > 0) {
+      showToast(`Skipped unknown member(s): ${missing.join(", ")}`, "warning");
+    }
+  };
 
   // Look two weeks ahead for openings.
   const timeWindow = useMemo(() => {
@@ -95,6 +131,7 @@ export default function GroupLinkView() {
       slot: iso,
       duration: String(duration),
       ...(includeToday ? { allowToday: "1" } : {}),
+      ...(meetingTitle.trim() ? { title: meetingTitle.trim() } : {}),
     });
     return `${origin}/${usernameList.join("+")}?${params.toString()}`;
   };
@@ -119,6 +156,34 @@ export default function GroupLinkView() {
         Pick who should be in the meeting. You&apos;ll only see times when{" "}
         <strong>everyone is free</strong> — all calendars are checked automatically.
       </p>
+
+      {/* Saved templates */}
+      {(templates.data?.length ?? 0) > 0 && (
+        <div className="mt-4">
+          <p className="text-emphasis text-sm font-medium">Templates</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {templates.data?.map((template) => (
+              <span
+                key={template.name}
+                className="border-default bg-default inline-flex items-center gap-1 rounded-md border pl-3 pr-1 text-sm">
+                <button
+                  type="button"
+                  className="text-emphasis py-1.5 hover:underline"
+                  onClick={() => applyTemplate(template)}>
+                  {template.name}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete template ${template.name}`}
+                  className="text-subtle hover:text-emphasis px-1.5 py-1.5"
+                  onClick={() => deleteTemplate.mutate({ name: template.name })}>
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* People picker */}
       <div className="border-subtle mt-6 overflow-hidden rounded-lg border">
@@ -190,6 +255,28 @@ export default function GroupLinkView() {
           <span className="text-emphasis text-sm">Include today&apos;s availability</span>
           <span className="text-subtle text-xs">(off = earliest bookable day is tomorrow)</span>
         </label>
+      )}
+
+      {/* Meeting name (fixed for the booker) */}
+      {selected.length > 0 && (
+        <div className="mt-3">
+          <label className="text-emphasis text-sm font-medium" htmlFor="group-meeting-name">
+            Meeting name <span className="text-subtle font-normal">(optional)</span>
+          </label>
+          <input
+            id="group-meeting-name"
+            type="text"
+            value={meetingTitle}
+            onChange={(e) => setMeetingTitle(e.target.value)}
+            maxLength={200}
+            placeholder="e.g. Monthly Performance Review"
+            className="border-default bg-default text-emphasis mt-1 block w-full rounded-md border px-3 py-2 text-sm"
+          />
+          <p className="text-subtle mt-1 text-xs">
+            If set, this becomes the meeting title and clients can&apos;t change it. Leave empty to let
+            the booker name the meeting.
+          </p>
+        </div>
       )}
 
       {/* Combined availability */}
@@ -264,6 +351,42 @@ export default function GroupLinkView() {
             <Button color="secondary" href={link} target="_blank">
               {t("preview")}
             </Button>
+          </div>
+
+          {/* Save the current setup as a reusable template */}
+          <div className="border-subtle mt-4 border-t pt-3">
+            <label className="text-emphasis text-sm font-medium" htmlFor="group-template-name">
+              Save this setup as a template
+            </label>
+            <div className="mt-1 flex gap-2">
+              <input
+                id="group-template-name"
+                type="text"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                maxLength={100}
+                placeholder='e.g. "Monthly Performance (with Sai)"'
+                className="border-default bg-default text-emphasis block w-full rounded-md border px-3 py-2 text-sm"
+              />
+              <Button
+                color="secondary"
+                disabled={!templateName.trim() || saveTemplate.isPending}
+                onClick={() =>
+                  saveTemplate.mutate({
+                    name: templateName.trim(),
+                    usernames: selected,
+                    duration,
+                    includeToday,
+                    ...(meetingTitle.trim() ? { title: meetingTitle.trim() } : {}),
+                  })
+                }>
+                Save
+              </Button>
+            </div>
+            <p className="text-subtle mt-1 text-xs">
+              Saves the people, duration, and meeting name. Saving with an existing template&apos;s name
+              updates it.
+            </p>
           </div>
         </div>
       )}
