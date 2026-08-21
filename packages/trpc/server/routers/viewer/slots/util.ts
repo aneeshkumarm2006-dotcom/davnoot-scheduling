@@ -1398,6 +1398,17 @@ export class AvailableSlotsService {
       }
     }
 
+    // Davnoot: links can block specific dates outright (?excludeDates=...) —
+    // e.g. "not the conference week" — independent of anyone's availability.
+    if (input.excludeDates?.length) {
+      const excludedDates = new Set(input.excludeDates);
+      for (const date of Object.keys(filteredSlotsMappedToDate)) {
+        if (excludedDates.has(date)) {
+          delete filteredSlotsMappedToDate[date];
+        }
+      }
+    }
+
     // We only want to run this on single targeted events and not dynamic
     if (!Object.keys(filteredSlotsMappedToDate).length && input.usernameList?.length === 1) {
       try {

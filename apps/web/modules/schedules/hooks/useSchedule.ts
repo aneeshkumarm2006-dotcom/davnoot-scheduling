@@ -86,6 +86,10 @@ export const useSchedule = ({
   const skipGetSchedule = searchParams?.get("cal.skipSlotsFetch") === "true";
   // Same-day slots are hidden server-side unless the shared link opted in.
   const allowSameDay = searchParams?.get("allowToday") === "1";
+  // Dates this link blocks outright, from ?excludeDates=YYYY-MM-DD,...
+  const excludeDates = (searchParams?.get("excludeDates") ?? "")
+    .split(",")
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
   const embedConnectVersion = searchParams?.get("cal.embed.connectVersion") || "0";
   const input = {
     isTeamEvent,
@@ -110,6 +114,7 @@ export const useSchedule = ({
     skipContactOwner,
     ...(queuedFormResponseId ? { queuedFormResponseId } : {}),
     ...(allowSameDay ? { allowSameDay } : {}),
+    ...(excludeDates.length ? { excludeDates } : {}),
     email,
     // Ensures that connectVersion causes a refresh of the data
     ...(embedConnectVersion ? { embedConnectVersion } : {}),

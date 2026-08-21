@@ -36,6 +36,12 @@ export const getScheduleSchemaObject = z.object({
   // Davnoot: same-day slots are hidden by default; senders can opt back in
   // per-link via allowToday=1 which the client maps to this flag.
   allowSameDay: z.boolean().optional(),
+  // Davnoot: dates a link explicitly blocks (?excludeDates=YYYY-MM-DD,...) —
+  // no slots are offered on these days regardless of availability.
+  excludeDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .max(120)
+    .optional(),
   _enableTroubleshooter: z.boolean().optional(),
   _bypassCalendarBusyTimes: z.boolean().optional(),
   _silentCalendarFailures: z.boolean().optional(),

@@ -42,6 +42,9 @@ export default function GroupLinkView() {
   const [includeToday, setIncludeToday] = useState(false);
   const [meetingTitle, setMeetingTitle] = useState("");
   const [templateName, setTemplateName] = useState("");
+  const [excludedRanges, setExcludedRanges] = useState<{ from: string; to: string }[]>([]);
+  const [excludeFrom, setExcludeFrom] = useState("");
+  const [excludeTo, setExcludeTo] = useState("");
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const meUsername = data?.me?.username ?? null;
@@ -55,6 +58,38 @@ export default function GroupLinkView() {
     [meUsername, selected]
   );
 
+  // Individual YYYY-MM-DD dates covered by the excluded ranges (capped so a
+  // stray far-future range can't blow up the URL).
+  const excludedDates = useMemo(() => {
+    const dates = new Set<string>();
+    for (const range of excludedRanges) {
+      let day = dayjs(range.from);
+      const end = dayjs(range.to);
+      while ((day.isBefore(end) || day.isSame(end, "day")) && dates.size < 120) {
+        dates.add(day.format("YYYY-MM-DD"));
+        day = day.add(1, "day");
+      }
+    }
+    return Array.from(dates).sort();
+  }, [excludedRanges]);
+
+  const addExcludedRange = () => {
+    if (!excludeFrom) return;
+    let from = excludeFrom;
+    let to = excludeTo || excludeFrom;
+    if (to < from) [from, to] = [to, from];
+    setExcludedRanges((prev) =>
+      prev.some((r) => r.from === from && r.to === to) ? prev : [...prev, { from, to }]
+    );
+    setExcludeFrom("");
+    setExcludeTo("");
+  };
+
+  const formatRange = (range: { from: string; to: string }) =>
+    range.from === range.to
+      ? dayjs(range.from).format("MMM D")
+      : `${dayjs(range.from).format("MMM D")} – ${dayjs(range.to).format("MMM D")}`;
+
   // lockDuration=1 hides the duration switcher on the public booking page so
   // clients can only book the length chosen here. Same-day slots are hidden
   // by default; allowToday=1 opts this specific link back in. A meeting name
@@ -65,8 +100,18 @@ export default function GroupLinkView() {
     const titleParam = meetingTitle.trim()
       ? `&title=${encodeURIComponent(meetingTitle.trim())}`
       : "";
-    return `${origin}/${usernameList.join("+")}?duration=${duration}&lockDuration=1${todayParam}${titleParam}`;
-  }, [origin, meUsername, selected.length, usernameList, duration, includeToday, meetingTitle]);
+    const excludeParam = excludedDates.length ? `&excludeDates=${excludedDates.join(",")}` : "";
+    return `${origin}/${usernameList.join("+")}?duration=${duration}&lockDuration=1${todayParam}${titleParam}${excludeParam}`;
+  }, [
+    origin,
+    meUsername,
+    selected.length,
+    usernameList,
+    duration,
+    includeToday,
+    meetingTitle,
+    excludedDates,
+  ]);
 
   const applyTemplate = (template: {
     name: string;
@@ -103,6 +148,7 @@ export default function GroupLinkView() {
       timeZone,
       duration: String(duration),
       ...(includeToday ? { allowSameDay: true } : {}),
+      ...(excludedDates.length ? { excludeDates: excludedDates } : {}),
     },
     {
       enabled: selected.length > 0 && !!meUsername,
@@ -132,6 +178,7 @@ export default function GroupLinkView() {
       duration: String(duration),
       ...(includeToday ? { allowToday: "1" } : {}),
       ...(meetingTitle.trim() ? { title: meetingTitle.trim() } : {}),
+      ...(excludedDates.length ? { excludeDates: excludedDates.join(",") } : {}),
     });
     return `${origin}/${usernameList.join("+")}?${params.toString()}`;
   };
@@ -279,6 +326,61 @@ export default function GroupLinkView() {
         </div>
       )}
 
+      {/* Exclude dates */}
+      {selected.length > 0 && (
+        <div className="mt-3">
+          <label className="text-emphasis text-sm font-medium" htmlFor="group-exclude-from">
+            Exclude dates <span className="text-subtle font-normal">(optional)</span>
+          </label>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <input
+              id="group-exclude-from"
+              type="date"
+              value={excludeFrom}
+              onChange={(e) => setExcludeFrom(e.target.value)}
+              className="border-default bg-default text-emphasis rounded-md border px-3 py-2 text-sm"
+            />
+            <span className="text-subtle text-sm">to</span>
+            <input
+              type="date"
+              aria-label="Exclude until (optional)"
+              value={excludeTo}
+              onChange={(e) => setExcludeTo(e.target.value)}
+              className="border-default bg-default text-emphasis rounded-md border px-3 py-2 text-sm"
+            />
+            <Button color="secondary" disabled={!excludeFrom} onClick={addExcludedRange}>
+              Add
+            </Button>
+          </div>
+          {excludedRanges.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {excludedRanges.map((range) => (
+                <span
+                  key={`${range.from}_${range.to}`}
+                  className="border-default bg-muted text-emphasis inline-flex items-center gap-1 rounded-md border py-1 pl-3 pr-1 text-sm">
+                  {formatRange(range)}
+                  <button
+                    type="button"
+                    aria-label={`Remove excluded dates ${formatRange(range)}`}
+                    className="text-subtle hover:text-emphasis px-1.5"
+                    onClick={() =>
+                      setExcludedRanges((prev) =>
+                        prev.filter((r) => !(r.from === range.from && r.to === range.to))
+                      )
+                    }>
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-subtle mt-1 text-xs">
+            No slots are offered on excluded days — here and on the link you send. Pick a single date, or
+            a from–to range to block a whole week.
+          </p>
+        </div>
+      )}
+
       {/* Combined availability */}
       {selected.length > 0 && (
         <div className="border-subtle mt-4 overflow-hidden rounded-lg border">
@@ -335,7 +437,9 @@ export default function GroupLinkView() {
             Clients opening this link can only book <strong>{duration}-minute</strong> slots.{" "}
             {includeToday
               ? "Today's slots are included."
-              : "Same-day slots are hidden — the earliest they can book is tomorrow."}
+              : "Same-day slots are hidden — the earliest they can book is tomorrow."}{" "}
+            {excludedRanges.length > 0 &&
+              `Excluded: ${excludedRanges.map(formatRange).join(", ")}.`}
           </p>
           <p className="text-default mt-2 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs">
             {link}
