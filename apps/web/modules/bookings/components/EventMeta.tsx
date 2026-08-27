@@ -238,7 +238,12 @@ export const EventMeta = ({
                   data-testid="event-meta-current-timezone">
                   <TimezoneSelect
                     timeZones={timeZones}
-                    menuPosition="absolute"
+                    // Portal the dropdown to <body>: rendered inside the navy
+                    // .davnoot-meta-rail it inherits the white-text/translucent-bg
+                    // overrides (invisible options) and gets clipped by the card.
+                    menuPosition="fixed"
+                    menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
+                    styles={{ menuPortal: (base) => ({ ...base, zIndex: 60 }) as typeof base }}
                     timezoneSelectCustomClassname={classNames?.eventMetaTimezoneSelect}
                     classNames={{
                       control: () =>
